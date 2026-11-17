@@ -1,0 +1,15 @@
+# PostgreSQL 16 실행 설정 (개발/시연용)
+services:
+  db:
+    image: postgres:16
+    container_name: pathfolio-db
+    environment:
+      POSTGRES_USER: pathfolio
+      POSTGRES_PASSWORD: pathfolio
+      POSTGRES_DB: pathfolio
+    ports:
+      - "5432:5432"
+    volumes:
+      - pathfolio-db-data:/var/lib/postgresql/data
+volumes:
+  pathfolio-db-data:

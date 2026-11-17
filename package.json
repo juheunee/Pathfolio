@@ -1,0 +1,11 @@
+{
+  "name": "pathfolio",
+  "private": true,
+  "scripts": {
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:setup": "pnpm --filter server db:setup",
+    "db:reset": "pnpm --filter server db:reset",
+    "dev:server": "pnpm --filter server dev"
+  }
+}

@@ -1,0 +1,14 @@
+# 의존성
+node_modules/
+
+# secret keys (커밋 금지)
+.env
+.env.*
+!.env.example
+
+# Prisma 코드
+server/src/generated/
+
+# 기타
+.DS_Store
+*.log
