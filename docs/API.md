@@ -10,7 +10,7 @@
 ### 로그인과 토큰
 
 1. `POST /api/auth/login` 으로 로그인하면 `token` 을 받는다.
-2. 그 뒤 모든 요청 헤더에 `Authorization: Bearer <token>` 을 붙인다.
+2. 그 뒤 2장 목록에서 "로그인" 칸이 "필요"인 요청의 헤더에 `Authorization: Bearer <token>` 을 붙인다. 트랙·교과목·비교과는 로그인 없이 볼 수 있다.
 3. 토큰 유효 시간: 8시간. 만료되면 401 → 화면은 로그인 화면으로 보낸다.
 4. 서버는 토큰 속 계정 번호로만 "내 데이터"를 찾는다. 주소나 본문에 다른 계정 번호를 넣는 API 는 없다.
 
@@ -71,11 +71,11 @@
 | DB | GET | `/api/me/roadmaps/{id}` | 로드맵 하나 | 필요 |
 | DB | PUT | `/api/me/roadmaps/{id}` | 로드맵 수정(통째 교체) | 필요 |
 | DB | DELETE | `/api/me/roadmaps/{id}` | 로드맵 삭제 | 필요 |
-| DB | GET | `/api/tracks` | 트랙 목록 | 필요 |
-| DB | GET | `/api/courses?q=&trackId=` | 교과목 검색 | 필요 |
-| DB | GET | `/api/courses/{code}` | 교과목 상세 (트랙별 인정 영역·선수과목) | 필요 |
-| DB | GET | `/api/extracurricular/categories` | 비교과 카테고리 목록 | 필요 |
-| DB | GET | `/api/extracurricular/programs?categoryId=` | 카테고리별 프로그램 | 필요 |
+| DB | GET | `/api/tracks` | 트랙 목록 | 불필요 |
+| DB | GET | `/api/courses?q=&trackId=` | 교과목 검색 | 불필요 |
+| DB | GET | `/api/courses/{code}` | 교과목 상세 (트랙별 인정 영역·선수과목) | 불필요 |
+| DB | GET | `/api/extracurricular/categories` | 비교과 카테고리 목록 | 불필요 |
+| DB | GET | `/api/extracurricular/programs?categoryId=` | 카테고리별 프로그램 | 불필요 |
 | DB | GET | `/api/me/subscriptions` | 내 구독 목록 | 필요 |
 | DB | PUT | `/api/me/subscriptions/{categoryId}` | 구독 | 필요 |
 | DB | DELETE | `/api/me/subscriptions/{categoryId}` | 구독 해제 | 필요 |
@@ -306,7 +306,7 @@
 - DELETE: 응답 204
 - 남의 로드맵·없는 번호: 404
 
-## 7. 공통 정보 (트랙·교과목·비교과)
+## 7. 공통 정보 (트랙·교과목·비교과, 로그인 불필요)
 
 ### GET `/api/tracks`
 
