@@ -1,0 +1,88 @@
+### Pathfolio API 직접 테스트
+### VS Code 확장 "REST Client" 설치 후, 각 요청 위의 "Send Request" 를 누른다.
+### 비밀번호는 server/.env 의 DEMO_PASSWORD 로 바꾼다 (이 파일에 실제 비밀번호를 저장해 커밋하지 않음).
+
+@base = http://localhost:4000/api
+
+### 1. 서버 살아 있는지
+GET {{base}}/health
+
+### 2. 로그인
+# @name login
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "loginId": "demo-m1", "password": "여기에-DEMO_PASSWORD" }
+
+###
+@token = {{login.response.body.data.token}}
+
+### 3. 내 정보
+GET {{base}}/me
+Authorization: Bearer {{token}}
+
+### 4. 내 이수 내역
+GET {{base}}/me/academic-records
+Authorization: Bearer {{token}}
+
+### 5. 졸업 요건 분석 (예시 응답)
+GET {{base}}/me/graduation-analysis
+Authorization: Bearer {{token}}
+
+### 6. 수강 추천 (예시 응답)
+GET {{base}}/me/course-recommendations
+Authorization: Bearer {{token}}
+
+### 7. 트랙 변경 비교 (예시 응답)
+POST {{base}}/me/track-comparisons
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "replaceRole": "SECONDARY", "targetTrackId": 3 }
+
+### 8. 트랙 목록
+GET {{base}}/tracks
+Authorization: Bearer {{token}}
+
+### 9. 과목 검색 (1번 트랙에서 인정되는 과목)
+GET {{base}}/courses?trackId=1
+Authorization: Bearer {{token}}
+
+### 10. 과목 상세
+GET {{base}}/courses/SAMPLE-003
+Authorization: Bearer {{token}}
+
+### 11. 로드맵 저장
+POST {{base}}/me/roadmaps
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "내 로드맵",
+  "items": [
+    { "kind": "COURSE", "courseId": 4, "plannedYear": 3, "plannedSemester": 2 },
+    { "kind": "EXTRACURRICULAR", "programId": 1, "plannedYear": 3, "plannedSemester": 2 }
+  ]
+}
+
+### 12. 내 로드맵 목록
+GET {{base}}/me/roadmaps
+Authorization: Bearer {{token}}
+
+### 13. 비교과 카테고리 / 프로그램
+GET {{base}}/extracurricular/programs?categoryId=1
+Authorization: Bearer {{token}}
+
+### 14. 카테고리 1 구독
+PUT {{base}}/me/subscriptions/1
+Authorization: Bearer {{token}}
+
+### 15. 오류 확인: 토큰 없이 요청 → 401
+GET {{base}}/me
+
+### 15-1. 공통 정보는 토큰 없이도 200
+GET {{base}}/courses?trackId=1
+
+### 16. 남의 로드맵(2번의 demo-m1을 demo-m2로 바꾼 후 실행) → 404
+GET {{base}}/me/roadmaps/1
+Authorization: Bearer {{token}}

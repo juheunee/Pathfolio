@@ -1,0 +1,241 @@
+// DB 설계 파일. Prisma가 이 파일을 읽어 DB 스키마를 만들고, TypeScript 타입을 생성한다.
+// 바꿀 때는 docs/ERD.md 도 같이 고친다.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────── 선택지(정해진 값 목록) ─────────
+
+enum MajorCategory {
+  MAJOR_BASIC    // 전공기초 (전기)
+  MAJOR_REQUIRED // 전공필수 (전필)
+  MAJOR_ELECTIVE // 전공선택 (전선)
+}
+
+enum Term {
+  FIRST  // 1학기
+  SUMMER // 여름 계절학기
+  SECOND // 2학기
+  WINTER // 겨울 계절학기
+}
+
+// 성적표의 이수구분 (재수강해도 처음 이수구분을 따름)
+enum RecordCategory {
+  MAJOR_BASIC          // 전공기초 (전기)
+  MAJOR_REQUIRED       // 전공필수 (전필)
+  MAJOR_ELECTIVE       // 전공선택 (전선)
+  LIBERAL_REQUIRED     // 교양필수 (교필)
+  LIBERAL_DISTRIBUTION // 선택필수교양 (선필교)
+  LIBERAL_GENERAL      // 일반교양
+  GENERAL_ELECTIVE     // 일반선택
+}
+
+enum RoadmapItemKind {
+  COURSE          // 교과
+  EXTRACURRICULAR // 비교과
+}
+
+enum RoadmapItemStatus {
+  PLANNED // 계획
+  DONE    // 완료 표시 (공식 이수 내역과 별개)
+}
+
+// ───────── 계정 ─────────
+
+// 사전 등록된 시연 계정 5개 (회원가입 없음)
+model Account {
+  id               Int      @id @default(autoincrement())
+  loginId          String   @unique            // 로그인 아이디 (예: demo-y1)
+  passwordHash     String                      // 비밀번호는 암호화(해시)해서만 저장
+  displayName      String                      // 화면 표시 이름
+  email            String?                     // 이메일 구독 알림 받는 주소
+  entryYear        Int                         // 입학년도 (예: 2024)
+  currentYear      Int                         // 현재 학년 1~4
+  currentSemester  Int                         // 현재 학기 1~2
+  primaryTrackId   Int?                        // 1트랙
+  secondaryTrackId Int?                        // 2트랙
+  createdAt        DateTime @default(now())
+
+  primaryTrack   Track?                 @relation("PrimaryTrack", fields: [primaryTrackId], references: [id])
+  secondaryTrack Track?                 @relation("SecondaryTrack", fields: [secondaryTrackId], references: [id])
+  records        AcademicRecord[]
+  roadmaps       Roadmap[]
+  subscriptions  CategorySubscription[]
+}
+
+// ───────── 학사 기준 데이터 (공식 자료에서 가져옴) ─────────
+
+// 전공트랙
+model Track {
+  id         Int     @id @default(autoincrement())
+  code       String  @unique  // 우리가 붙이는 식별 코드 (예: WEB)
+  name       String           // 트랙 이름
+  department String           // 소속 학부·학과
+  sourceUrl  String?          // 공식 출처 주소
+  isSample   Boolean @default(false) // 시연용 Mock 데이터면 true
+
+  rules            TrackCourseRule[]
+  records          AcademicRecord[]
+  primaryAccounts  Account[]         @relation("PrimaryTrack")
+  secondaryAccounts Account[]        @relation("SecondaryTrack")
+}
+
+// 교과목 기본 정보 (트랙과 무관한 정보만)
+model Course {
+  id          Int     @id @default(autoincrement())
+  code        String  @unique // 학교 과목 코드
+  name        String
+  credits     Int             // 학점
+  liberalArea String?         // 선택필수교양이면 배분이수 영역 (예: 인문학적 상상력). 그 외 비움
+  summary     String?         // 공식 프로파일 요약
+  profileUrl  String?         // 종정시 교과목 프로파일
+  syllabusUrl String?         // 수업계획서
+  sourceUrl   String?         // 이 정보의 공식 출처
+  isSample    Boolean @default(false)
+
+  rules         TrackCourseRule[]
+  prerequisites CoursePrerequisite[] @relation("Course")
+  requiredBy    CoursePrerequisite[] @relation("Prerequisite")
+  records       AcademicRecord[]
+  roadmapItems  RoadmapItem[]
+}
+
+// 선수과목: "courseId 를 듣기 전에 prerequisiteId 를 들어야 함"
+model CoursePrerequisite {
+  courseId       Int
+  prerequisiteId Int
+
+  course       Course @relation("Course", fields: [courseId], references: [id], onDelete: Cascade)
+  prerequisite Course @relation("Prerequisite", fields: [prerequisiteId], references: [id], onDelete: Cascade)
+
+  @@id([courseId, prerequisiteId])
+}
+
+// 트랙별 과목 인정 규칙: 같은 과목도 트랙마다 전필/전선이 다를 수 있음
+model TrackCourseRule {
+  id                  Int           @id @default(autoincrement())
+  trackId             Int
+  courseId            Int
+  category            MajorCategory // 이 트랙에서 인정되는 영역
+  catalogYear         Int           // 적용 교육과정 연도 (예: 2024)
+  recommendedYear     Int?          // 권장 학년 (공식 로드맵 기준)
+  recommendedSemester Int?          // 권장 학기
+  sourceUrl           String?
+  note                String?
+
+  track  Track  @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([trackId, courseId, catalogYear])
+}
+
+// 입학년도별 졸업 요건. 숫자 규칙은 코드가 아닌 rules(JSON)에 둔다
+model GraduationRequirement {
+  id            Int      @id @default(autoincrement())
+  entryYearFrom Int      // 적용 시작 입학년도 (예: 2024)
+  entryYearTo   Int?     // 적용 끝 입학년도 (비우면 계속 적용)
+  rules         Json     // 총학점·트랙별·교양 기준 (docs/ERD.md 참고)
+  sourceUrl     String?
+  verifiedAt    DateTime? // 공식 자료와 대조한 날짜
+  isSample      Boolean  @default(false)
+}
+
+// ───────── 계정별 학업 데이터 (조회 전용) ─────────
+
+// 공식 이수 내역. 화면에서 수정하지 않음
+model AcademicRecord {
+  id            Int     @id @default(autoincrement())
+  accountId     Int
+  courseId      Int
+  takenYear     Int     // 수강 연도 (예: 2025)
+  term          Term
+  earnedCredits Int     // 취득 학점
+  category      RecordCategory // 성적표의 이수구분
+  trackId       Int?    // 전공 과목이면 인정받은 선택 트랙 (학생이 고르고 변경 신청 가능)
+  grade         String? // 성적
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  course  Course  @relation(fields: [courseId], references: [id])
+  track   Track?  @relation(fields: [trackId], references: [id])
+
+  @@unique([accountId, courseId, takenYear, term])
+}
+
+// ───────── 로드맵 (사용자가 수정·저장) ─────────
+
+model Roadmap {
+  id            Int      @id @default(autoincrement())
+  accountId     Int
+  title         String
+  aiExplanation String?  // AI 설명을 저장해 두고 다시 부르지 않음
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  account Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  items   RoadmapItem[]
+}
+
+model RoadmapItem {
+  id              Int               @id @default(autoincrement())
+  roadmapId       Int
+  kind            RoadmapItemKind
+  courseId        Int?              // 교과면 채움
+  programId       Int?              // 비교과면 채움
+  customTitle     String?           // 목록에 없는 활동을 직접 적을 때
+  plannedYear     Int               // 배치 학년 1~4
+  plannedSemester Int               // 배치 학기 1~2
+  status          RoadmapItemStatus @default(PLANNED)
+  sortOrder       Int               @default(0)
+
+  roadmap Roadmap                 @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  course  Course?                 @relation(fields: [courseId], references: [id])
+  program ExtracurricularProgram? @relation(fields: [programId], references: [id])
+}
+
+// ───────── 비교과 ─────────
+
+model ExtracurricularCategory {
+  id        Int     @id @default(autoincrement())
+  name      String  @unique
+  sourceUrl String?
+  isSample  Boolean @default(false)
+
+  programs      ExtracurricularProgram[]
+  subscriptions CategorySubscription[]
+}
+
+model ExtracurricularProgram {
+  id         Int       @id @default(autoincrement())
+  categoryId Int
+  title      String
+  applyStart DateTime?
+  applyEnd   DateTime?
+  runStart   DateTime?
+  runEnd     DateTime?
+  points     Int?      
+  sourceUrl  String?
+  isSample   Boolean   @default(false)
+  createdAt  DateTime  @default(now()) // 신규 등록 알림 판단 기준
+
+  category     ExtracurricularCategory @relation(fields: [categoryId], references: [id])
+  roadmapItems RoadmapItem[]
+}
+
+// 관심 카테고리 이메일 구독
+model CategorySubscription {
+  accountId  Int
+  categoryId Int
+  createdAt  DateTime @default(now())
+
+  account  Account                 @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  category ExtracurricularCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([accountId, categoryId])
+}

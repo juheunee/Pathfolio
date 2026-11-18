@@ -22,18 +22,19 @@
 4. **학기별 로드맵:** 교과·비교과 활동을 학년·학기별로 배치하고 수정·저장·완료 체크.
 5. **전공트랙 변경 비교:** 현재 계획과 후보 트랙의 요건 차이 및 추가 이수 필요 항목을 표시.
 
-## 기술 방향 (확정 범위와 미확정 사항)
+## 기술 방향 (2026-11-12 회의 확정)
 
-| 구분        | 방향                          | 상태                                                                  |
-| ----------- | ----------------------------- | --------------------------------------------------------------------- |
-| 프론트엔드  | React                         | **선정**                                                              |
-| 백엔드      | Node.js + Express             | **선정** (Node.js 프레임워크는 Express로 문서화; 팀 최종 재확인 가능) |
-| 데이터 저장 | 로그인 계정에 연결된 서버 DB  | **방향 선정**, DB 제품 미정                                           |
-| 추천 로직   | 규칙 기반 추천 + AI 생성 설명 | **선정**, 모델/제공사 미정                                            |
-| 인증        | 서버 측 인증, 접근 통제       | **필요**, 세션/토큰 방식 미정                                         |
-| 빌드·배포   | 개발 환경과 시연 URL          | 미정                                                                  |
+| 구분        | 사용 기술                                   | 상태                                    |
+| ----------- | ------------------------------------------- | --------------------------------------- |
+| 언어        | JavaScript                                  | **확정**                                |
+| 프론트엔드  | React + Vite                                | **확정**                                |
+| 백엔드      | Node.js + Express                           | **확정**                                |
+| 데이터 저장 | PostgreSQL + Prisma                         | **확정** (로컬은 Docker 로 실행)        |
+| 추천 로직   | 규칙 기반 계산 + AI 설명                    | **확정**, AI 모델/제공사 미정           |
+| 인증        | 사전 등록 시연 계정 5개 + 토큰(JWT)         | 초안              |
+| 실행 환경   | 팀원 PC 에서 개발, 시연용 노트북에서 실행   | **확정**                                |
 
-구체적인 요구사항은 [`SPEC.md`](SPEC.md), 개발 범위와 검증은 [`MVP.md`](MVP.md), Git·코드 협업 정책은 [`AGENTS.md`](AGENTS.md)를 확인한다.
+구체적인 요구사항은 [`docs/SPEC.md`](docs/SPEC.md), 개발 범위와 검증은 [`docs/MVP.md`](docs/MVP.md), DB 설계는 [`docs/ERD.md`](docs/ERD.md), API 규격은 [`docs/API.md`](docs/API.md), Git·코드 협업 정책은 [`AGENTS.md`](AGENTS.md)를 확인한다.
 
 ## 기본 사용자 흐름
 
@@ -41,21 +42,29 @@
 
 ## 저장소와 개발 시작
 
-현재 GitHub 저장소는 초기 빈 저장소로 확인되었으며, 실제 소스와 실행 스크립트는 아직 검증하지 않았다. 아래는 **제안 폴더 구조**로, 구현 후 실제 구조에 맞게 갱신한다.
+실행 방법은 [`docs/SETUP.md`](docs/SETUP.md) 를 따른다. 요약:
+
+```bash
+pnpm install
+# server/.env.example 을 복사해 server/.env 작성
+pnpm db:up        # PostgreSQL (Docker)
+pnpm db:setup     # 표 생성 + 시연 데이터
+pnpm dev:server   # http://localhost:4000/api/health
+```
 
 ```text
 Pathfolio/
-├─ AGENTS.md
-├─ README.md
-├─ SPEC.md
-├─ MVP.md
-├─ client/                  # React (제안)
-├─ server/                  # Node.js + Express (제안)
-├─ docs/                    # ERD, API 계약, 디자인, 의사결정 기록 (추후)
-└─ .github/                 # PR 템플릿, CI (추후)
+├─ AGENTS.md / README.md
+├─ package.json, pnpm-workspace.yaml   # pnpm 워크스페이스 (server, client)
+├─ docker-compose.yml                  # 로컬 PostgreSQL
+├─ server/                             # Node.js + Express + Prisma
+│  ├─ prisma/                          # schema.prisma, migrations, seed.js
+│  └─ src/                             # API 코드
+├─ client/                             # React (예정)
+└─ docs/                               # SPEC, MVP, ERD, API, SETUP
 ```
 
-실제 의존성, 환경 변수명, 실행 명령, 테스트 명령, DB 마이그레이션은 코드 생성 후 검증하여 여기에 명시한다. **검증하지 않은 `npm` 명령을 현재 동작하는 것으로 안내하지 않는다.** 비밀키 및 실제 학생 데이터는 저장소에 올리지 않는다.
+비밀키(`.env`)와 실제 학생 식별 정보(학번·이름·성적)는 저장소에 올리지 않는다. 시연 데이터는 `isSample` 로 구분한다.
 
 ## 협업 워크플로
 
