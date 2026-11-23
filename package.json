@@ -6,6 +6,8 @@
     "db:down": "docker compose down",
     "db:setup": "pnpm --filter server db:setup",
     "db:reset": "pnpm --filter server db:reset",
-    "dev:server": "pnpm --filter server dev"
+    "dev:server": "pnpm --filter server dev",
+    "dev:client": "pnpm --filter pathfolio-client dev",
+    "build:client": "pnpm --filter pathfolio-client build"
   }
 }
