@@ -1,18 +1,17 @@
 # Pathfolio
 
-## 프런트엔드 시연
+## 프론트엔드 시연
 
-Node.js 22와 npm으로 실행한다.
+서버와 같은 pnpm 워크스페이스로 실행한다(설치는 [`docs/SETUP.md`](docs/SETUP.md) 1~2단계). 저장소 맨 위 폴더에서:
 
 ```sh
-cd client
-npm ci
-npm run dev
+pnpm install
+pnpm dev:client
 ```
 
-개발 서버의 기본 주소는 `http://localhost:5173`이다. 대시보드 `/`,
-학업 현황 `/academic`, 교과 추천 `/courses`, 로드맵 `/roadmap`을
-직접 열 수 있다. 빌드는 `npm run build`로 확인한다.
+개발 서버의 기본 주소는 `http://localhost:5173`이다. 
+대시보드 `/`, 학업 현황 `/academic`, 교과 추천 `/courses`, 로드맵 `/roadmap`을
+직접 열 수 있다. 빌드는 `pnpm build:client`로 확인한다.
 
 시연 데이터는 `client/src/data/sample.js`에 있다. 학점과 추천 근거는 고정 예시다.
 동일 과목은 학기와 관계없이 초안에 한 번만 추가할 수 있으며, 이는 시연용 임시 정책이다.
@@ -82,7 +81,7 @@ Pathfolio/
 ├─ server/                             # Node.js + Express + Prisma
 │  ├─ prisma/                          # schema.prisma, migrations, seed.js
 │  └─ src/                             # API 코드
-├─ client/                             # React (예정)
+├─ client/                             # React + Vite (화면)
 └─ docs/                               # SPEC, MVP, ERD, API, SETUP
 ```
 
