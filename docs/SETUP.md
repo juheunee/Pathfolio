@@ -1,10 +1,11 @@
 # 개발 환경 실행 안내
 
-## 1. 처음 한 번: 프로그램 설치
+## 1. 초기 1회
+### 1-1. 프로그램 설치
 
 | 프로그램 | 버전 | 설치 확인 명령 |
 | --- | --- | --- |
-| Git | 아무 최신 버전 | `git --version` |
+| Git | 최신 버전 | `git --version` |
 | Node.js | **24 LTS** (22.18 이상이면 동작) | `node -v` |
 | pnpm | **12** | `pnpm -v` |
 | Docker Desktop | 최신 | `docker --version` |
@@ -13,7 +14,7 @@
 - pnpm: Node 설치 후 터미널에서 `npm install -g pnpm@12`
 - Docker Desktop: https://www.docker.com/products/docker-desktop → 설치 후 **실행해 둔다** (창 닫지 않고 내려두기)
 
-## 2. 처음 한 번: 저장소 받기와 설정
+### 1-2. 저장소 받기와 설정
 
 ```bash
 git clone https://github.com/juheunee/Pathfolio.git
@@ -25,18 +26,18 @@ pnpm install
 
 | 키 | 넣을 값 |
 | --- | --- |
-| `DATABASE_URL` | 그대로 둔다 |
-| `PORT` | 그대로 (4000) |
-| `JWT_SECRET` | 아무 긴 영문·숫자 (각자 달라도 됨) |
+| `DATABASE_URL` | 그대로 둠 |
+| `PORT` | 그대로 둠 (4000) |
+| `JWT_SECRET` | 긴 영문·숫자 (각자 달라도 됨) |
 | `DEMO_PASSWORD` | 팀에서 따로 공유한 시연용 비밀번호 |
-| `CLIENT_ORIGIN` | 그대로 (화면 개발 서버 주소) |
+| `CLIENT_ORIGIN` | 그대로 둠 (화면 개발 서버 주소) |
 
 ```bash
 pnpm db:up      # DB 켜기
 pnpm db:setup   # 표 만들기 + 코드 생성 + 시연 데이터 넣기
 ```
 
-## 3. 매번: 서버 실행
+## 2. 서버 실행
 
 ```bash
 pnpm db:up        # Docker Desktop 이 켜져 있어야 함
@@ -44,6 +45,12 @@ pnpm dev:server   # 서버 실행
 ```
 
 브라우저에서 http://localhost:4000/api/health → `"status":"ok"` 가 보이면 성공.
+
+화면은 터미널을 하나 더 열어서:
+
+```bash
+pnpm dev:client   # 화면 실행 → http://localhost:5173
+```
 
 ## 4. 시연 계정
 
@@ -73,4 +80,6 @@ pnpm dev:server   # 서버 실행
 | `Cannot resolve environment variable: DATABASE_URL` | `server/.env` 파일이 없음 → 2단계 |
 | `EADDRINUSE: address already in use :::4000` | 서버가 이미 켜져 있음 → 다른 터미널의 서버를 Ctrl + C |
 | `Cannot find module './generated/prisma/client.ts'` | `pnpm --filter server db:generate` |
+| `pnpm install` 에서 `ERR_PNPM_IGNORED_BUILDS` | 최신 main 을 받았는지 확인 (`pnpm-workspace.yaml` 의 `allowBuilds` 에 `esbuild` 가 있어야 함) |
+| `client` 폴더에서 `npm install` 을 했음 | 화면도 pnpm 으로 설치한다. `client/package-lock.json`, `client/node_modules` 를 지우고 맨 위 폴더에서 `pnpm install` |
 | 로그인하면 401 | 비밀번호가 `.env` 의 `DEMO_PASSWORD` 와 다름. 바꿨다면 `pnpm db:reset` |
