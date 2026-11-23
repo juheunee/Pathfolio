@@ -1,15 +1,16 @@
-// 시연용 Mock 데이터. 모든 과목·트랙·비교과는 가짜이며 isSample = true.
-// 공식 자료가 정리되면 이 파일의 샘플 부분을 실제 데이터로 바꾼다.
+// 시연용 데이터 적재
+// - 트랙, 과목, 트랙별 인정 규칙, 선수과목, 비교과: prisma/data/academic-data.json (공식 자료 기준, 시연용 값은 isSample = true)
+// - 졸업 요건, 시연 계정, 이수 내역: 이 파일 (계정과 이수 내역은 가상 데이터)
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { prisma } from "../src/db.js";
-
-const CATALOG_YEAR = 2024;
+import { loadAcademicData } from "./academic-data.js";
 
 async function main() {
   if (!process.env.DEMO_PASSWORD) {
     throw new Error("server/.env 에 DEMO_PASSWORD 가 없습니다.");
   }
+  const data = loadAcademicData(); // 형식 오류면 DB 변경 전에 중단
 
   // 0) 기존 데이터 비우기 + 번호(id)를 1부터 다시 시작 (목적: 여러 번 실행해도 같은 결과)
   await prisma.$executeRawUnsafe(`
@@ -19,69 +20,37 @@ async function main() {
     RESTART IDENTITY CASCADE
   `);
 
-  // 1) 트랙 (샘플)
+  // 1) 트랙 (JSON 순서대로 id 1, 2, 3 부여)
   const track = {};
-  for (const x of ["A", "B", "C"]) {
-    track[x] = await prisma.track.create({
-      data: { code: `SAMPLE-${x}`, name: `샘플 트랙 ${x}`, department: "샘플 학부", isSample: true },
+  for (const t of data.tracks) {
+    track[t.code] = await prisma.track.create({ data: t });
+  }
+
+  // 2) 교과목
+  const course = {};
+  for (const c of data.courses) {
+    course[c.code] = await prisma.course.create({ data: c });
+  }
+
+  // 3) 선수과목
+  for (const p of data.prerequisites) {
+    await prisma.coursePrerequisite.create({
+      data: { courseId: course[p.course].id, prerequisiteId: course[p.prerequisite].id },
     });
   }
-  const { A: trackA, B: trackB, C: trackC } = track;
 
-  // 2) 교과목 (샘플)
-  const courseRows = [
-    ["SAMPLE-001", "예시 전공기초", 3, null],
-    ["SAMPLE-002", "예시 전공필수 1", 3, null],
-    ["SAMPLE-003", "예시 전공필수 2", 3, null],
-    ["SAMPLE-004", "예시 전공필수 3", 3, null],
-    ["SAMPLE-005", "예시 전공선택 1", 3, null],
-    ["SAMPLE-006", "예시 전공선택 2", 3, null],
-    ["SAMPLE-007", "예시 전공선택 3", 3, null],
-    ["SAMPLE-008", "예시 트랙B 전공필수", 3, null],
-    ["SAMPLE-009", "예시 트랙B 전용", 3, null],
-    ["SAMPLE-010", "예시 트랙C 전공선택", 3, null],
-    ["SAMPLE-011", "예시 트랙C 전공필수", 3, null],
-    ["SAMPLE-L01", "예시 교양필수 1", 2, null],
-    ["SAMPLE-L02", "예시 선택필수교양 1", 3, "인문학적 상상력"],
-  ];
-  const course = {};
-  for (const [code, name, credits, liberalArea] of courseRows) {
-    course[code] = await prisma.course.create({ data: { code, name, credits, liberalArea, isSample: true } });
-  }
-
-  // 3) 선수과목 (샘플): 전공필수 2 를 듣기 전에 전공필수 1 수강 필수
-  await prisma.coursePrerequisite.create({
-    data: { courseId: course["SAMPLE-003"].id, prerequisiteId: course["SAMPLE-002"].id },
-  });
-
-  // 4) 트랙별 인정 영역 (샘플): SAMPLE-003 은 A 에서 전필, B 에서 전선 → 배분 검증용
-  const rules = [
-    [trackA, "SAMPLE-001", "MAJOR_BASIC", 1, 1],
-    [trackA, "SAMPLE-002", "MAJOR_REQUIRED", 2, 1],
-    [trackA, "SAMPLE-003", "MAJOR_REQUIRED", 2, 2],
-    [trackA, "SAMPLE-004", "MAJOR_REQUIRED", 3, 1],
-    [trackA, "SAMPLE-005", "MAJOR_ELECTIVE", 3, 1],
-    [trackA, "SAMPLE-006", "MAJOR_ELECTIVE", 3, 2],
-    [trackA, "SAMPLE-007", "MAJOR_ELECTIVE", 4, 1],
-    [trackB, "SAMPLE-001", "MAJOR_BASIC", 1, 1],
-    [trackB, "SAMPLE-003", "MAJOR_ELECTIVE", 2, 2],
-    [trackB, "SAMPLE-007", "MAJOR_ELECTIVE", 4, 1],
-    [trackB, "SAMPLE-008", "MAJOR_REQUIRED", 2, 1],
-    [trackB, "SAMPLE-009", "MAJOR_ELECTIVE", 3, 1],
-    [trackC, "SAMPLE-001", "MAJOR_BASIC", 1, 1],
-    [trackC, "SAMPLE-010", "MAJOR_ELECTIVE", 3, 1],
-    [trackC, "SAMPLE-011", "MAJOR_REQUIRED", 2, 2],
-  ];
-  for (const [track, code, category, year, semester] of rules) {
+  // 4) 트랙별 인정 규칙 (연도 생략 시 source.catalogYear 적용)
+  for (const r of data.rules) {
     await prisma.trackCourseRule.create({
       data: {
-        trackId: track.id,
-        courseId: course[code].id,
-        category,
-        catalogYear: CATALOG_YEAR,
-        recommendedYear: year,
-        recommendedSemester: semester,
-        note: "샘플 규칙",
+        trackId: track[r.track].id,
+        courseId: course[r.course].id,
+        category: r.category,
+        catalogYear: r.catalogYear ?? data.source.catalogYear,
+        recommendedYear: r.recommendedYear ?? null,
+        recommendedSemester: r.recommendedSemester ?? null,
+        sourceUrl: r.sourceUrl ?? null,
+        note: r.note ?? null,
       },
     });
   }
@@ -111,7 +80,7 @@ async function main() {
   // 6) 시연 계정 5개. 비밀번호는 .env 의 DEMO_PASSWORD 를 암호화해 저장
   const passwordHash = await bcrypt.hash(process.env.DEMO_PASSWORD, 10);
   //    트랙은 2학년 진학 때 고르므로 1학년 계정은 트랙이 없다
-  const withTracks = { primaryTrackId: trackA.id, secondaryTrackId: trackB.id };
+  const withTracks = { primaryTrackId: track.MOBILE.id, secondaryTrackId: track.WEB.id };
   const accounts = [
     { loginId: "demo-y1", displayName: "가상 1학년", entryYear: 2026, currentYear: 1, currentSemester: 2 },
     { loginId: "demo-y2", displayName: "가상 2학년", entryYear: 2025, currentYear: 2, currentSemester: 2, ...withTracks },
@@ -124,26 +93,28 @@ async function main() {
     account[a.loginId] = await prisma.account.create({ data: { ...a, passwordHash } });
   }
 
-  // 7) 이수 내역 (샘플). 실제 내역이 모이면 demo-m1~3 부분을 바꾼다
+  // 7) 이수 내역 (가상, 과목은 academic-data.json 의 공식 과목)
   //    [계정, 과목, 연도, 학기, 성적표 이수구분, 인정 트랙(전공만)]
-  //    한 과목은 선택한 두 트랙 중 한 곳에만 인정된다. SAMPLE-003 은 B 트랙 전선으로 인정받은 예
+  //    한 과목은 두 트랙 중 한 곳에만 인정. V020004 는 두 트랙 모두 전공선택이지만 웹공학으로 인정받은 예
   const records = [
-    ["demo-y1", "SAMPLE-001", 2026, "FIRST", "MAJOR_BASIC", null], // 트랙 선택 전 이수 [확인 필요]
+    ["demo-y1", "CTE0001", 2026, "FIRST", "MAJOR_BASIC", null], // 트랙 선택 전 이수 [확인 필요]
     ["demo-y1", "SAMPLE-L01", 2026, "FIRST", "LIBERAL_REQUIRED", null],
-    ["demo-y2", "SAMPLE-001", 2025, "FIRST", "MAJOR_BASIC", "A"],
-    ["demo-y2", "SAMPLE-002", 2026, "FIRST", "MAJOR_REQUIRED", "A"],
+    ["demo-y2", "CTE0001", 2025, "FIRST", "MAJOR_BASIC", "MOBILE"],
+    ["demo-y2", "CTE0002", 2025, "SECOND", "MAJOR_BASIC", "WEB"],
+    ["demo-y2", "V021006", 2026, "FIRST", "MAJOR_REQUIRED", "MOBILE"],
     ["demo-y2", "SAMPLE-L01", 2025, "FIRST", "LIBERAL_REQUIRED", null],
     ...["demo-m1", "demo-m2", "demo-m3"].flatMap((id) => [
-      [id, "SAMPLE-001", 2024, "FIRST", "MAJOR_BASIC", "A"],
-      [id, "SAMPLE-002", 2025, "FIRST", "MAJOR_REQUIRED", "A"],
-      [id, "SAMPLE-003", 2025, "SECOND", "MAJOR_ELECTIVE", "B"],
-      [id, "SAMPLE-005", 2026, "FIRST", "MAJOR_ELECTIVE", "A"],
-      [id, "SAMPLE-008", 2025, "FIRST", "MAJOR_REQUIRED", "B"],
+      [id, "CTE0001", 2024, "FIRST", "MAJOR_BASIC", "MOBILE"],
+      [id, "CTE0002", 2024, "SECOND", "MAJOR_BASIC", "WEB"],
+      [id, "V020004", 2025, "FIRST", "MAJOR_ELECTIVE", "WEB"],
+      [id, "V020010", 2025, "SECOND", "MAJOR_ELECTIVE", "MOBILE"],
+      [id, "V024003", 2025, "SECOND", "MAJOR_REQUIRED", "WEB"],
+      [id, "V021006", 2026, "FIRST", "MAJOR_REQUIRED", "MOBILE"],
       [id, "SAMPLE-L01", 2024, "FIRST", "LIBERAL_REQUIRED", null],
       [id, "SAMPLE-L02", 2024, "SECOND", "LIBERAL_DISTRIBUTION", null],
     ]),
   ];
-  for (const [loginId, code, takenYear, term, category, trackKey] of records) {
+  for (const [loginId, code, takenYear, term, category, trackCode] of records) {
     await prisma.academicRecord.create({
       data: {
         accountId: account[loginId].id,
@@ -152,29 +123,30 @@ async function main() {
         term,
         earnedCredits: course[code].credits,
         category,
-        trackId: trackKey ? track[trackKey].id : null,
+        trackId: trackCode ? track[trackCode].id : null,
       },
     });
   }
 
-  // 8) 비교과 카테고리·프로그램 (샘플)
-  for (const x of ["A", "B", "C"]) {
+  // 8) 비교과 카테고리, 프로그램
+  for (const c of data.extracurricular) {
     const category = await prisma.extracurricularCategory.create({
-      data: { name: `샘플 카테고리 ${x}`, isSample: true },
+      data: { name: c.category, sourceUrl: c.sourceUrl ?? null, isSample: c.isSample },
     });
-    for (const n of [1, 2]) {
-      await prisma.extracurricularProgram.create({
-        data: { categoryId: category.id, title: `예시 프로그램 ${x}-${n}`, isSample: true },
-      });
+    for (const p of c.programs) {
+      await prisma.extracurricularProgram.create({ data: { ...p, categoryId: category.id } });
     }
   }
 
-  console.log("시드 완료: 계정 5개, 트랙 3개, 과목 13개, 비교과 카테고리 3개");
+  console.log(
+    `시드 완료: 계정 ${accounts.length}개, 트랙 ${data.tracks.length}개, 과목 ${data.courses.length}개, ` +
+      `인정 규칙 ${data.rules.length}개, 이수 내역 ${records.length}개, 비교과 카테고리 ${data.extracurricular.length}개`,
+  );
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error(e.message ?? e);
     process.exit(1);
   })
   .finally(() => prisma.$disconnect());

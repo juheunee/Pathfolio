@@ -1,6 +1,6 @@
-### Pathfolio API 직접 테스트
-### VS Code 확장 "REST Client" 설치 후, 각 요청 위의 "Send Request" 를 누른다.
-### 비밀번호는 server/.env 의 DEMO_PASSWORD 로 바꾼다 (이 파일에 실제 비밀번호를 저장해 커밋하지 않음).
+### Pathfolio API 직접 테스트 목적 파일
+### VS Code 확장 "REST Client" 설치 후, 각 요청 위의 "Send Request" 를 클릭
+### 비밀번호는 server/.env 의 DEMO_PASSWORD 로 변경 (이 파일에 실제 비밀번호를 저장해 커밋하지 않음)
 
 @base = http://localhost:4000/api
 
@@ -44,12 +44,12 @@ Content-Type: application/json
 GET {{base}}/tracks
 Authorization: Bearer {{token}}
 
-### 9. 과목 검색 (1번 트랙에서 인정되는 과목)
+### 9. 과목 검색 (1번 트랙 = 모바일소프트웨어트랙에서 인정되는 과목 6개)
 GET {{base}}/courses?trackId=1
 Authorization: Bearer {{token}}
 
-### 10. 과목 상세
-GET {{base}}/courses/SAMPLE-003
+### 10. 과목 상세 (모바일소프트웨어, 웹공학 두 트랙 모두 전공선택인 과목)
+GET {{base}}/courses/V020004
 Authorization: Bearer {{token}}
 
 ### 11. 로드맵 저장
