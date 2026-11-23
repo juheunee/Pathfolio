@@ -10,6 +10,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
+    "data:check": "node prisma/academic-data.js",
     "db:reset": "prisma migrate reset --force && prisma generate && prisma db seed",
     "db:studio": "prisma studio"
   },
