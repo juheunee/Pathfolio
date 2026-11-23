@@ -1,8 +1,9 @@
 # Pathfolio ERD
 
-- 상태: 1주차 초안 (2026-11-18 회의용)
+- 상태: 2주차 초안
 - 실제 코드: [`server/prisma/schema.prisma`](../server/prisma/schema.prisma). 둘이 다르면 schema.prisma 가 기준이며, 이 문서를 같이 고친다.
 - 시연용 Mock 데이터는 `isSample = true` 로 표시한다.
+- 트랙, 과목, 트랙별 인정 규칙, 선수과목, 비교과 데이터는 [`server/prisma/data/academic-data.json`](../server/prisma/data/academic-data.json) 에서 넣는다(형식: 같은 폴더 `README.md`).
 - 그림: [ERDCloud](https://www.erdcloud.com/d/kvMfT3qtAjhd2kHEc)
 
 ## 전체 관계도

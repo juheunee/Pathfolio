@@ -1,6 +1,6 @@
 # Pathfolio API 명세
 
-- 상태: 1주차 초안 (2026-11-18 회의용)
+- 상태: 2주차 초안
 - 기능 요구사항은 [`SPEC.md`](SPEC.md), 이 문서는 **요청·응답의 세부 규격**을 다룬다.
 - 서버 주소(개발): `http://localhost:4000`
 - 응답 방식: DB 응답 / 예시 응답(계산 로직 구현 전, `meta.sample = true`)
@@ -40,10 +40,10 @@
 | 204 | — | 성공, 돌려줄 내용 없음 (로그아웃, 삭제, 구독 해제) |
 | 400 | `BAD_REQUEST` | 입력값 오류, JSON 형식 오류, 없는 과목·프로그램 번호 |
 | 401 | `UNAUTHORIZED` | 토큰 없음·틀림·만료, 아이디·비밀번호 불일치 |
-| 404 | `NOT_FOUND` | 없는 주소, 없거나 **남의** 로드맵, 없는 과목·카테고리 |
+| 404 | `NOT_FOUND` | 없는 주소, 없거나 **다른 사람의** 로드맵, 없는 과목·카테고리 |
 | 500 | `INTERNAL_ERROR` | 서버 내부 오류 |
 
-> 남의 로드맵은 403 이 아닌 404 로 답한다(있는지조차 알려 주지 않기 위함).
+> 다른 사람의 로드맵은 403 이 아닌 404 로 답한다(있는지조차 알려 주지 않기 위함).
 
 ### 날짜·학기 표현
 
@@ -119,8 +119,8 @@
     "id": 3, "loginId": "demo-m1", "displayName": "팀원 1", "email": null,
     "entryYear": 2024, "currentYear": 3, "currentSemester": 2,
     "primaryTrackId": 1, "secondaryTrackId": 2,
-    "primaryTrack": { "id": 1, "code": "SAMPLE-A", "name": "샘플 트랙 A", "department": "샘플 학부", "sourceUrl": null, "isSample": true },
-    "secondaryTrack": { "id": 2, "code": "SAMPLE-B", "name": "샘플 트랙 B", "department": "샘플 학부", "sourceUrl": null, "isSample": true },
+    "primaryTrack": { "id": 1, "code": "MOBILE", "name": "모바일소프트웨어트랙", "department": "컴퓨터공학부", "sourceUrl": null, "isSample": false },
+    "secondaryTrack": { "id": 2, "code": "WEB", "name": "웹공학트랙", "department": "컴퓨터공학부", "sourceUrl": null, "isSample": false },
     "createdAt": "2026-11-17T01:00:00.000Z"
   }
 }
@@ -132,13 +132,13 @@
 {
   "data": [
     {
-      "id": 6, "accountId": 3, "courseId": 1, "takenYear": 2024, "term": "FIRST", "earnedCredits": 3,
+      "id": 7, "accountId": 3, "courseId": 1, "takenYear": 2024, "term": "FIRST", "earnedCredits": 3,
       "category": "MAJOR_BASIC", "trackId": 1, "grade": null,
-      "course": { "code": "SAMPLE-001", "name": "예시 전공기초", "credits": 3, "liberalArea": null },
-      "track": { "id": 1, "name": "샘플 트랙 A" }
+      "course": { "code": "CTE0001", "name": "컴퓨터프로그래밍", "credits": 3, "liberalArea": null },
+      "track": { "id": 1, "name": "모바일소프트웨어트랙" }
     }
   ],
-  "meta": { "totalCredits": 20, "count": 7 }
+  "meta": { "totalCredits": 23, "count": 8 }
 }
 ```
 
@@ -176,7 +176,7 @@
 }
 ```
 
-(`tracks` 에는 실제로 1·2트랙 두 개가 온다. 위는 하나만 표시)
+(`tracks` 에는 실제로 1·2트랙 두 개가 온다. 위에서는 하나만 표시)
 
 ### GET `/api/me/course-recommendations`
 
@@ -284,7 +284,7 @@
       {
         "id": 1, "roadmapId": 1, "kind": "COURSE", "courseId": 4, "programId": null, "customTitle": null,
         "plannedYear": 3, "plannedSemester": 2, "status": "PLANNED", "sortOrder": 0,
-        "course": { "code": "SAMPLE-004", "name": "예시 전공필수 3", "credits": 3 }, "program": null
+        "course": { "code": "V020010", "name": "알고리즘", "credits": 3 }, "program": null
       }
     ]
   }
@@ -304,17 +304,19 @@
 - GET: 위 POST 응답과 같은 모양
 - PUT: 요청 본문은 POST 와 같다. **항목 전체를 보낸 내용으로 교체**한다(일부만 보내면 나머지는 지워짐). 응답 200
 - DELETE: 응답 204
-- 남의 로드맵·없는 번호: 404
+- 다른 사람의 로드맵·없는 번호: 404
 
 ## 7. 공통 정보 (트랙·교과목·비교과, 로그인 불필요)
 
 ### GET `/api/tracks`
 
 ```json
-{ "data": [{ "id": 1, "code": "SAMPLE-A", "name": "샘플 트랙 A", "department": "샘플 학부", "sourceUrl": null, "isSample": true }] }
+{ "data": [{ "id": 1, "code": "MOBILE", "name": "모바일소프트웨어트랙", "department": "컴퓨터공학부", "sourceUrl": null, "isSample": false }] }
 ```
 
-### GET `/api/courses?q=필수&trackId=1`
+(실제로는 MOBILE, WEB, BA 3개가 온다. 위에서는 하나만 표시)
+
+### GET `/api/courses?q=웹&trackId=2`
 
 - `q`: 과목명 일부 (선택), `trackId`: 그 트랙에서 인정되는 과목만 (선택)
 
@@ -322,32 +324,39 @@
 {
   "data": [
     {
-      "id": 2, "code": "SAMPLE-002", "name": "예시 전공필수 1", "credits": 3, "liberalArea": null,
-      "summary": null, "profileUrl": null, "syllabusUrl": null, "sourceUrl": null, "isSample": true,
+      "id": 2, "code": "CTE0002", "name": "웹프로그래밍기초", "credits": 3, "liberalArea": null,
+      "summary": null, "profileUrl": null, "syllabusUrl": null, "sourceUrl": null, "isSample": false,
       "rules": [
-        { "id": 2, "trackId": 1, "courseId": 2, "category": "MAJOR_REQUIRED", "catalogYear": 2024,
-          "recommendedYear": 2, "recommendedSemester": 1, "sourceUrl": null, "note": "샘플 규칙",
-          "track": { "id": 1, "name": "샘플 트랙 A" } }
+        { "id": 7, "trackId": 2, "courseId": 2, "category": "MAJOR_BASIC", "catalogYear": 2026,
+          "recommendedYear": null, "recommendedSemester": null, "sourceUrl": null, "note": "강의정보 책자 83~84쪽",
+          "track": { "id": 2, "name": "웹공학트랙" } }
       ]
     }
   ]
 }
 ```
 
+(실제로는 CTE0002, V024003, V024005 3개가 과목 코드 순으로 온다. 위에서는 하나만 표시)
+
+- `rules` 에는 검색 조건과 관계없이 그 과목의 모든 트랙 규칙이 온다. 두 트랙에서 인정되는 과목(예: `V020004`)은 2개
+- `recommendedYear`, `recommendedSemester` 는 권장 학기 자료 확인 전이라 지금은 `null`
+
 ### GET `/api/courses/{code}`
 
 위 한 개와 같은 모양 + `prerequisites`:
 
 ```json
-"prerequisites": [{ "courseId": 3, "prerequisiteId": 2, "prerequisite": { "code": "SAMPLE-002", "name": "예시 전공필수 1" } }]
+"prerequisites": []
 ```
+
+선수과목이 등록된 과목이면 `[{ "courseId": 나중 과목 id, "prerequisiteId": 먼저 들을 과목 id, "prerequisite": { "code": "...", "name": "..." } }]` 모양이다. 지금 데이터에는 확인된 선수과목이 없어 빈 배열이다.
 
 오류: 404 (`과목을 찾을 수 없습니다.`)
 
 ### GET `/api/extracurricular/categories`
 
 ```json
-{ "data": [{ "id": 1, "name": "샘플 카테고리 A", "sourceUrl": null, "isSample": true }] }
+{ "data": [{ "id": 1, "name": "자기이해·진로탐색", "sourceUrl": null, "isSample": true }] }
 ```
 
 ### GET `/api/extracurricular/programs?categoryId=1`
@@ -357,7 +366,7 @@
 ```json
 {
   "data": [
-    { "id": 2, "categoryId": 1, "title": "예시 프로그램 A-2", "applyStart": null, "applyEnd": null,
+    { "id": 2, "categoryId": 1, "title": "예시 전공 탐색 특강", "applyStart": null, "applyEnd": null,
       "runStart": null, "runEnd": null, "points": null, "sourceUrl": null, "isSample": true,
       "createdAt": "2026-11-17T05:45:01.700Z" }
   ]
@@ -368,7 +377,7 @@
 
 | 요청 | 응답 |
 | --- | --- |
-| GET `/api/me/subscriptions` | `{ "data": [{ "accountId": 3, "categoryId": 1, "createdAt": "...", "category": { "id": 1, "name": "샘플 카테고리 A", ... } }] }` |
+| GET `/api/me/subscriptions` | `{ "data": [{ "accountId": 3, "categoryId": 1, "createdAt": "...", "category": { "id": 1, "name": "자기이해·진로탐색", ... } }] }` |
 | PUT `/api/me/subscriptions/1` | 200, 구독 하나 (`data` 는 위 배열의 한 칸). 이미 구독 중이어도 200 |
 | DELETE `/api/me/subscriptions/1` | 204. 이미 해제돼 있어도 204 |
 | 없는 카테고리 PUT | 404 |
@@ -377,5 +386,5 @@
 
 ## 9. 변경 규칙
 
-- 이 문서 수정 → PR → 화면(이주흔)·데이터(장수안) 확인 → 서버 코드 변경
+- 이 문서 수정 → PR → 화면·데이터 확인 → 서버 코드 변경
 - 응답 칸 이름을 바꾸거나 지우는 변경은 화면을 깨뜨리므로 반드시 공유한다. 칸을 **추가**하는 것은 괜찮다.
