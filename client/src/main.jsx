@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { academic, courses, profile, terms } from './data/sample.js';
+import { BrowserRouter, Routes, Route, Link, NavLink, useNavigate, useLocation } from 'react-router';
 import './styles.css';
 
 const routes = [
@@ -9,14 +10,6 @@ const routes = [
   { path: '/courses', title: '교과목', icon: '▤' },
   { path: '/roadmap', title: '로드맵', icon: '◇' },
 ];
-
-function Link({ to, navigate, children, ...props }) {
-  return <a href={to} {...props} onClick={event => {
-    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    event.preventDefault();
-    navigate(to);
-  }}>{children}</a>;
-}
 
 function PageTitle({ title, children }) {
   return <div className="page-title"><h1 tabIndex={-1}>{title}</h1>{children}</div>;
@@ -40,13 +33,13 @@ function CreditTable() {
   </table></div>;
 }
 
-function Dashboard({ navigate, draft }) {
+function Dashboard({ draft }) {
   return <>
     <PageTitle title="대시보드" />
     <ProfileStrip />
     <section className="callout split">
       <h2>졸업까지 필요한 내용을 확인하세요</h2>
-      <Link to="/academic" navigate={navigate} className="button">학업 현황 보기 →</Link>
+      <Link to="/academic" className="button">학업 현황 보기 →</Link>
     </section>
     <div className="metrics">
       <div className="panel"><strong>총 취득 학점</strong><p>{academic.credits.earned}학점</p></div>
@@ -57,19 +50,19 @@ function Dashboard({ navigate, draft }) {
       <section className="panel"><h2>영역별 이수 현황</h2><CreditTable /></section>
       <section className="panel"><h2>로드맵 초안</h2>
         <p>{draft.length ? `계획 과목 ${draft.length}개 · 저장 전 변경 있음` : '추가한 계획 과목이 없습니다.'}</p>
-        <Link to="/roadmap" navigate={navigate} className="button secondary">로드맵 확인 →</Link>
+        <Link to="/roadmap" className="button secondary">로드맵 확인 →</Link>
       </section>
     </div>
-    <Link to="/courses" navigate={navigate} className="panel shortcut">수강 교과목 살펴보기 →</Link>
+    <Link to="/courses" className="panel shortcut">수강 교과목 살펴보기 →</Link>
   </>;
 }
 
-function Academic({ navigate }) {
+function Academic() {
   const [showCompleted, setShowCompleted] = useState(false);
   return <>
     <PageTitle title="학업 현황">
       <span className="badge">조회 전용</span>
-      <Link to="/courses" navigate={navigate} className="button secondary">교과 추천 보기 →</Link>
+      <Link to="/courses" className="button secondary">교과 추천 보기 →</Link>
     </PageTitle>
     <ProfileStrip />
     <div className="view-controls" role="group" aria-label="학업 현황 보기">
@@ -192,12 +185,12 @@ function Recommendations({ draft, onAdd }) {
   </>;
 }
 
-function Roadmap({ draft, navigate }) {
+function Roadmap({ draft }) {
   return <>
     <PageTitle title="나의 로드맵">{draft.length > 0 && <span className="badge amber">저장 전 변경 있음</span>}</PageTitle>
     <section className="panel split">
       <div><strong>계획 대상 트랙</strong><p>{profile.tracks.join(' · ')}</p></div>
-      <Link to="/courses" navigate={navigate} className="button secondary">교과 추가</Link>
+      <Link to="/courses" className="button secondary">교과 추가</Link>
     </section>
     <p className="callout">현재 페이지 실행 중에만 유지되는 임시 초안입니다. 새로고침하면 초기화됩니다.</p>
     <div className="term-grid">
@@ -220,32 +213,18 @@ function Roadmap({ draft, navigate }) {
 }
 
 function App() {
-  const [path, setPath] = useState(window.location.pathname);
   const [draft, setDraft] = useState([]);
   const main = useRef(null);
   const moved = useRef(false);
-
-  useEffect(() => {
-    function onPopState() {
-      moved.current = true;
-      setPath(window.location.pathname);
-    }
-    window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
-  }, []);
+  const navigate = useNavigate();
+  const path = useLocation().pathname;
 
   const route = routes.find(item => item.path === path);
   useEffect(() => {
     document.title = `${route?.title ?? '페이지 없음'} · Pathfolio`;
     if (moved.current) main.current.querySelector('h1')?.focus();
-  }, [path, route]);
-
-  function navigate(to) {
-    if (path === to) return;
-    window.history.pushState(null, '', to);
     moved.current = true;
-    setPath(to);
-  }
+  }, [path, route]);
 
   function addCourse(code, term) {
     if (!courses.some(course => course.code === code) || !terms.some(option => option.id === term)) return;
@@ -255,27 +234,32 @@ function App() {
 
   return <>
     <header className="site-header">
-      <Link to="/" navigate={navigate} className="brand"><span aria-hidden="true">P</span> Pathfolio</Link>
+      <Link to="/" className="brand"><span aria-hidden="true">P</span> Pathfolio</Link>
       <span>대학 학업 로드맵</span>
     </header>
     <div className="layout">
       <nav aria-label="주 메뉴">
-        {routes.map(item => <Link key={item.path} to={item.path} navigate={navigate}
-          aria-current={path === item.path ? 'page' : undefined}>
+        {routes.map(item => <NavLink key={item.path} to={item.path} end>
           <span aria-hidden="true">{item.icon}</span>{item.title}
-        </Link>)}
+        </NavLink>)}
         <span className="nav-disabled"><span aria-hidden="true">□</span>비교과 <small>준비 중</small></span>
       </nav>
       <main ref={main}>
         <p className="sample-notice"><strong>시연용 sample 데이터</strong> · 공식 학업 자료나 학사 판정으로 사용할 수 없습니다.</p>
-        {path === '/' && <Dashboard navigate={navigate} draft={draft} />}
-        {path === '/academic' && <Academic navigate={navigate} />}
-        {path === '/courses' && <Recommendations draft={draft} onAdd={addCourse} />}
-        {path === '/roadmap' && <Roadmap navigate={navigate} draft={draft} />}
-        {!route && <><PageTitle title="페이지를 찾을 수 없습니다" /><Link to="/" navigate={navigate}>대시보드로 돌아가기</Link></>}
+        <Routes>
+          <Route path="/" element={<Dashboard draft={draft} />} />
+          <Route path="/academic" element={<Academic />} />
+          <Route path="/courses" element={<Recommendations draft={draft} onAdd={addCourse} />} />
+          <Route path="/roadmap" element={<Roadmap draft={draft} />} />
+          <Route path="*" element={<><PageTitle title="페이지를 찾을 수 없습니다" /><Link to="/">대시보드로 돌아가기</Link></>} />
+        </Routes>
       </main>
     </div>
   </>;
 }
 
-createRoot(document.getElementById('root')).render(<App />);
+createRoot(document.getElementById('root')).render(
+  <BrowserRouter>
+    <App />
+  </BrowserRouter>
+);
