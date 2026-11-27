@@ -1,106 +1,57 @@
 # Pathfolio
 
-## 프론트엔드 시연
+**Pathfolio**는 한성대학교 학생을 위한 HSU 진로로드맵 e-Advisor 웹앱 프로토타입이다. 학생이 전공트랙을 탐색하고 학년·학기별 교과·비교과 계획, 졸업 후 5년 계획을 작성·관리하도록 돕는다. 팀 Veylo(이주흔·문차민·장수안)가 공모전용으로 개발 중이다.
 
-서버와 같은 pnpm 워크스페이스로 실행한다(설치는 [`docs/SETUP.md`](docs/SETUP.md) 1~2단계). 저장소 맨 위 폴더에서:
+학업 이력, 트랙 요건, 비교과 활동을 여러 곳에서 찾아 계획해야 하는 부담을 줄이는 것이 목표다. 주요 사용자는 신입생·재학생·취업 준비 졸업생이다. 결과는 진로 설계 참고 자료이며 학교의 공식 이수·졸업 판정이 아니다. 시연용 가상 데이터는 sample로 표시한다.
 
-```sh
+## 핵심 흐름과 MVP
+
+- 신입생: 로그인 → 트랙 둘러보기·조합 비교 → 학기별 계획 작성 또는 공개 계획 가져오기 → 대표 로드맵 설정.
+- 재학생: 확정된 학업 결과 확인 → 로드맵별 계획·진행·졸업 가능성 확인 → 카드 수정·저장 → 재로그인 후 조회.
+- 취준생: 졸업 후 5년 마일스톤 작성 → 공개 범위 설정 → 후배에게 허용된 계획 공유.
+
+직접 만든 로드맵은 친구 공개가 기본이고 가져온 복사본은 비공개로 시작한다. 학생은 공식 교과 성적·비교과 포인트를 수정하지 않는다. 홀랜드 RIASEC 기반 트랙 추천과 트랙 변경·재수강 시뮬레이션은 P1 목표다. [MVP 범위와 인수 기준](docs/MVP.md) 및 [제품 동작 명세](docs/SPEC.md)에 전체 범위를 적었다.
+
+## 기술과 현재 구현
+
+| 영역 | 목표·결정 | 현재 main (2026-11-28 확인) |
+| --- | --- | --- |
+| 프런트엔드 | React PC 웹 | React 19, Vite 6, React Router와 4개 sample 화면 |
+| 백엔드 | Node.js·Express JSON API | Express 5, JWT·bcryptjs, 일부 조회·저장 API |
+| DB | **Oracle 확정** | PostgreSQL·Prisma 코드가 남아 있음. Oracle 전환 미구현 |
+| 패키지 | JavaScript·pnpm workspace | 루트 package.json, client·server 패키지 |
+| 배포 | 미확정. Vercel·OCI는 검토안 | 공개 시연 URL 확인되지 않음 |
+
+현재 화면 경로는 /, /academic, /courses, /roadmap이다. 화면의 로드맵 초안은 React 메모리에 있어 새로고침하면 초기화된다. 서버에 일부 로드맵 API가 있지만 화면과 연결되지 않았다. 졸업·추천 예시 응답은 실제 계산이 아니다. Notion의 최신 정책은 Oracle을 기준으로 하며 현행 PostgreSQL/Prisma 스크립트는 전환 전 코드로만 남아 있다.
+
+## 저장소 구조
+
+| 경로 | 내용 |
+| --- | --- |
+| client/src/ | 화면, 컴포넌트, sample 데이터 |
+| server/src/ | Express 라우트, 인증, DB 접근 |
+| server/prisma/ | 현행 PostgreSQL/Prisma 스키마·시드·마이그레이션(전환 대상) |
+| docs/ | 제품 명세, MVP, 현행 API·ERD·실행 안내 |
+
+## 로컬에서 확인하기
+
+현재 화면을 보려면 Node.js 22.18 이상과 pnpm이 필요하다. 저장소 루트에서 아래 **실제 스크립트**를 사용한다.
+
+~~~sh
 pnpm install
 pnpm dev:client
-```
+~~~
 
-개발 서버의 기본 주소는 `http://localhost:5173`이다. 
-대시보드 `/`, 학업 현황 `/academic`, 교과 추천 `/courses`, 로드맵 `/roadmap`을
-직접 열 수 있다. 빌드는 `pnpm build:client`로 확인한다.
+Vite 기본 주소는 http://localhost:5173이다. pnpm build:client는 화면 빌드, pnpm --filter server data:check는 학사 JSON 데이터 검사를 실행한다. 서버 실행 스크립트 pnpm dev:server도 존재하지만 **현재 PostgreSQL/Prisma 환경용**이다. Oracle 연결·DDL·시드·서버 실행 절차는 아직 구현·검증되지 않았으므로 이 README에 Oracle 실행 명령을 제시하지 않는다. [docs/SETUP.md](docs/SETUP.md)는 전환 전 환경의 상세 기록이다.
 
-시연 데이터는 `client/src/data/sample.js`에 있다. 학점과 추천 근거는 고정 예시다.
-동일 과목은 학기와 관계없이 초안에 한 번만 추가할 수 있으며, 이는 시연용 임시 정책이다.
-초안은 현재 탭의 React 메모리에서 화면 이동 중에 유지되고 새로고침하거나 탭을 닫으면 초기화된다.
-공식 이수 내역과 취득 학점은 조회 전용이다.
-실제 인증, API 연동, 로드맵 저장 및 저장본 조회는 후속 작업이다.
+현재 server/.env.example에는 DATABASE_URL, PORT, JWT_SECRET, DEMO_PASSWORD, CLIENT_ORIGIN이 정의돼 있다. 값은 실제 파일을 확인해 각자 설정하고 비밀 값이나 .env 파일을 커밋하지 않는다. Oracle 전환 시 변수 이름과 설정 방법을 코드·예제 파일·이 문서에 함께 반영한다.
 
-> **나의 기록이, 나의 진로가 되다.**  
-> 학업 데이터를 바탕으로 전공트랙을 추천하고 학년·학기별 교과·비교과 이수 로드맵을 설계·관리하는 **HSU 진로로드맵 e-Advisor 웹앱 프로토타입**
+## 문서와 출처
 
-- **팀:** Veylo — _새로운 시도로 이어지는 흐름_
-- **팀원:** 이주흔 · 문차민 · 장수안
-- **대상:** 한성대학교 학생을 위한 공모전 프로토타입
-- **상태:** 기획/문서화 단계. 이 README는 구현 완료를 뜻하지 않음.
+- [AGENTS.md](AGENTS.md): 개발·협업·검증 규칙
+- [docs/SPEC.md](docs/SPEC.md): 제품 정책과 요구사항 ID
+- [docs/MVP.md](docs/MVP.md): P0/P1 범위와 인수 시나리오
+- [docs/API.md](docs/API.md), [docs/ERD.md](docs/ERD.md), [docs/SETUP.md](docs/SETUP.md): 현행 구현 계약과 전환 전 실행 기록
+- [Notion HSU 진로로드맵 개발 공모전](https://app.notion.com/p/411776f72047803db6b1d8821851f90b): 프로젝트와 최신 통합 기획 문서의 상위 페이지
 
-## 문제와 해결
-
-학생이 자신의 학업 이력, 전공트랙별 이수 요건, 교과·비교과 활동을 따로 찾아 진로 계획을 세워야 하는 부담을 줄인다. Pathfolio는 사용자 입력 또는 허가받은 학업 데이터를 정리하고, **규칙 기반 적합도·이수 요건 계산**과 **AI 설명 보조**를 결합해 전공트랙 후보를 제안한다. 이후 학기별 계획을 작성·저장하고 진행 상황을 관리한다.
-
-> 추천은 참고 정보이며 학교의 공식 학사 판정이나 진로·취업을 보장하지 않는다. 추천 근거와 사용한 데이터 기준일을 함께 보여준다.
-
-## 주요 기능
-
-1. **계정/프로필:** 로그인, 사용자별 학업 정보 저장·조회·수정.
-2. **학업 데이터:** 학년·학기, 수강 및 이수 과목, 성적/학점(입력 가능한 범위)을 등록하고 요약.
-3. **맞춤 전공트랙 추천:** 이수 요건, 관심 분야, 학업 이력에 근거한 후보 및 설명 제공. AI는 근거 없는 자격 판정을 생성하지 않도록 제한.
-4. **학기별 로드맵:** 교과·비교과 활동을 학년·학기별로 배치하고 수정·저장·완료 체크.
-5. **전공트랙 변경 비교:** 현재 계획과 후보 트랙의 요건 차이 및 추가 이수 필요 항목을 표시.
-
-## 기술 방향 (2026-11-12 회의 확정)
-
-| 구분        | 사용 기술                                   | 상태                                    |
-| ----------- | ------------------------------------------- | --------------------------------------- |
-| 언어        | JavaScript                                  | **확정**                                |
-| 프론트엔드  | React + Vite                                | **확정**                                |
-| 백엔드      | Node.js + Express                           | **확정**                                |
-| 데이터 저장 | PostgreSQL + Prisma                         | **확정** (로컬은 Docker 로 실행)        |
-| 추천 로직   | 규칙 기반 계산 + AI 설명                    | **확정**, AI 모델/제공사 미정           |
-| 인증        | 사전 등록 시연 계정 5개 + 토큰(JWT)         | 초안              |
-| 실행 환경   | 팀원 PC 에서 개발, 시연용 노트북에서 실행   | **확정**                                |
-
-구체적인 요구사항은 [`docs/SPEC.md`](docs/SPEC.md), 개발 범위와 검증은 [`docs/MVP.md`](docs/MVP.md), DB 설계는 [`docs/ERD.md`](docs/ERD.md), API 규격은 [`docs/API.md`](docs/API.md), Git·코드 협업 정책은 [`AGENTS.md`](AGENTS.md)를 확인한다.
-
-## 기본 사용자 흐름
-
-진로 관심사가 아직 뚜렷하지 않은 학생에게는 자기이해·진로탐색 비교과를 첫 단계로 추천한다. 앱 개발처럼 관심사가 뚜렷한 신입생에게는 관련 전공트랙 정보와 기본 로드맵을 안내한다. 자세한 흐름은 [관심사에 따른 진로 안내](docs/SPEC.md#관심사에-따른-진로-안내)를 참조한다.
-
-`로그인 → 학업 정보 등록 → 전공 후보 및 추천 근거 확인 → 학기별 로드맵 생성 → 항목 수정/완료 → 저장 및 재조회 → 필요 시 전공트랙 비교`
-
-## 저장소와 개발 시작
-
-실행 방법은 [`docs/SETUP.md`](docs/SETUP.md) 를 따른다. 요약:
-
-```bash
-pnpm install
-# server/.env.example 을 복사해 server/.env 작성
-pnpm db:up        # PostgreSQL (Docker)
-pnpm db:setup     # 표 생성 + 시연 데이터
-pnpm dev:server   # http://localhost:4000/api/health
-```
-
-```text
-Pathfolio/
-├─ AGENTS.md / README.md
-├─ package.json, pnpm-workspace.yaml   # pnpm 워크스페이스 (server, client)
-├─ docker-compose.yml                  # 로컬 PostgreSQL
-├─ server/                             # Node.js + Express + Prisma
-│  ├─ prisma/                          # schema.prisma, migrations, seed.js
-│  └─ src/                             # API 코드
-├─ client/                             # React + Vite (화면)
-└─ docs/                               # SPEC, MVP, ERD, API, SETUP
-```
-
-비밀키(`.env`)와 실제 학생 식별 정보(학번·이름·성적)는 저장소에 올리지 않는다. 시연 데이터는 `isSample` 로 구분한다.
-
-## 협업 워크플로
-
-- 기본 브랜치를 `master`에서 **`main`으로 전환할 예정**이다.
-- 작업 브랜치 예시: `feat/jh/major-recommendation`, `feat/cm/roadmap-api`, `docs/sa/mvp-review`.
-- 변경은 PR을 통해 합치고, 작성자 외 **1명 이상 승인** 및 관련 검증을 요구한다.
-- `main` 직접 Push 금지, API/DB/추천 규칙 변경 시 문서와 영향받는 코드 동시 갱신.
-- 세부 규칙은 [`AGENTS.md`](AGENTS.md)가 우선한다.
-
-## 팀 구성
-
-| 팀원   | 학번    | 담당 영역       |
-| ------ | ------- | --------------- |
-| 이주흔 | 2471029 | FE/BE 적절 분배 |
-| 문차민 | 2471012 | FE/BE 적절 분배 |
-| 장수안 | 2471018 | FE/BE 적절 분배 |
-
-**참고:** Pathfolio 세부사항은 추후 팀 합의와 공식 학사 데이터 검증을 거쳐 확정한다.
+요구사항은 최신 Notion 통합본을 기준으로, 구현 상태는 원격 main의 실제 코드로 확인했다. 둘의 차이는 [MVP.md](docs/MVP.md)에 남겼다.
